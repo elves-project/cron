@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.gyyx.elves.cron.dao.CronDao">
+	
+	<select id="queryByIp" parameterType="String" resultType="TaskCron">
+		SELECT * FROM task_cron WHERE ip=#{ip} ORDER BY create_time DESC
+	</select>
+	<select id="queryIdsByIp" parameterType="String" resultType="String">
+		SELECT `id` FROM task_cron WHERE ip=#{ip} ORDER BY create_time DESC
+	</select>
+	<select id="queryAllCron" parameterType="int" resultType="TaskCron">
+		SELECT * FROM task_cron WHERE 1=1 
+		<if test="_parameter ==0">
+		  AND `flag` = 0
+		</if>
+		<if test="_parameter==1">
+		  AND `flag` = 1
+		</if>
+		ORDER BY create_time DESC
+	</select>
+	
+	<select id="queryById" parameterType="String" resultType="TaskCron">
+		SELECT * FROM task_cron WHERE id=#{id}
+	</select>
+	
+	<insert id="add" parameterType="TaskCron">
+		INSERT INTO task_cron(id,ip,mode,app,func,param,timeout,proxy,rule,flag,create_time) 
+		VALUES
+		(#{id},#{ip},#{mode},#{app},#{func},#{param},#{timeout},#{proxy},#{rule},#{flag},#{createTime})
+	</insert>
+	
+	<update id="updateFlag">
+		UPDATE task_cron SET flag=#{1} WHERE id=#{0}
+	</update>
+	
+	<delete id="delete" parameterType="String">
+		DELETE FROM task_cron WHERE id=#{id}
+	</delete>
+	
+	<insert id="insertResult" parameterType="TaskResult">
+		INSERT INTO task_result 
+		(`cron_id`,`flag`,`error`,`worker_flag`,`worker_message`,`worker_costtime`,`end_time`)
+		VALUES 
+		(#{cronId},#{flag},#{error},#{workerFlag},#{workerMessage},#{workerCosttime},#{endTime})
+	</insert>
+	
+	<delete id="deleteResult" parameterType="String">
+		DELETE FROM task_result WHERE `cron_id` = #{cronId}
+	</delete>
+	
+	<select id="queryResult" parameterType="String" resultType="TaskResult">
+		SELECT * FROM task_result WHERE `cron_id` = #{cronId} ORDER BY `end_time` DESC LIMIT 1
+	</select>
+	
+</mapper>
