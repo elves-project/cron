@@ -37,6 +37,7 @@ public class ProgramEntrance {
 		SpringUtil.PROPERTIES_CONFIG_PATH=configPath+File.separator+"conf"+File.separator+"conf.properties";
 		SpringUtil.LOG4J_CONFIG_PATH=configPath+File.separator+"conf"+File.separator+"log4j.properties";
 		SpringUtil.MYBATIS_CONFIG_PATH="file:"+configPath+File.separator+"conf"+File.separator+"mybatis.xml";
+		LOG.info("loadAllConfigFilePath success!");
 	}
 	
 	/**
@@ -45,6 +46,7 @@ public class ProgramEntrance {
 	private static void loadLogConfig() throws Exception{
 		InputStream in=new FileInputStream(SpringUtil.LOG4J_CONFIG_PATH);// 自定义配置
 		PropertyConfigurator.configure(in);
+		LOG.info("loadLogConfig success!");
 	}
 	
 	/**
@@ -52,6 +54,7 @@ public class ProgramEntrance {
 	 */
 	private static void loadApplicationXml() throws Exception{
 		SpringUtil.app = new FileSystemXmlApplicationContext(SpringUtil.SPRING_CONFIG_PATH,SpringUtil.RABBITMQ_CONFIG_PATH);
+		LOG.info("loadApplicationXml success!");
 	}
 	
 	/**
@@ -61,11 +64,24 @@ public class ProgramEntrance {
 	 * @return void    返回类型
 	 */
 	private static void registerZooKeeper() throws Exception{
-		ZookeeperExcutor zke=new ZookeeperExcutor(PropertyLoader.ZOOKEEPER_HOST,
-				PropertyLoader.ZOOKEEPER_OUT_TIME, PropertyLoader.ZOOKEEPER_OUT_TIME);
-		String nodeName=zke.createNode(PropertyLoader.ZOOKEEPER_ROOT+"/Cron/", "");
-		if(null!=nodeName){
-			zke.addListener(PropertyLoader.ZOOKEEPER_ROOT+"/Cron/", "");
+		if("true".equalsIgnoreCase(PropertyLoader.ZOOKEEPER_ENABLED)){
+			LOG.info("regist zookeeper ....");
+			ZookeeperExcutor zke=new ZookeeperExcutor(PropertyLoader.ZOOKEEPER_HOST,
+					PropertyLoader.ZOOKEEPER_OUT_TIME, PropertyLoader.ZOOKEEPER_OUT_TIME);
+
+			//创建模块根节点
+			if(null==zke.getClient().checkExists().forPath(PropertyLoader.ZOOKEEPER_ROOT)){
+				zke.getClient().create().creatingParentsIfNeeded().forPath(PropertyLoader.ZOOKEEPER_ROOT);
+			}
+			if(null==zke.getClient().checkExists().forPath(PropertyLoader.ZOOKEEPER_ROOT+"/cron")){
+				zke.getClient().create().creatingParentsIfNeeded().forPath(PropertyLoader.ZOOKEEPER_ROOT+"/cron");
+			}
+
+			String nodeName=zke.createNode(PropertyLoader.ZOOKEEPER_ROOT+"/cron/", "");
+			if(null!=nodeName){
+				zke.addListener(PropertyLoader.ZOOKEEPER_ROOT+"/cron/", "");
+			}
+			LOG.info("register ZooKeeper success!");
 		}
 	}
 	
@@ -87,26 +103,21 @@ public class ProgramEntrance {
 				jobTaskManager.addJob(cron);
 			}
 		}
+		LOG.info("load cron job success!");
 	}
 	
 	public static void main(String[] args) {
-		//args = new String[]{"E:\\Git\\elves-cron\\cron"};
 		if(null!=args&&args.length>0){
 			try {
 				loadAllConfigFilePath(args[0]);
-				LOG.info("loadAllConfigFilePath success!");
-				
+
 		    	loadLogConfig();
-				LOG.info("loadLogConfig success!");
 
 				loadApplicationXml();
-				LOG.info("loadApplicationXml success!");
-				
+
 				registerZooKeeper();
-				LOG.info("registerZooKeeper success!");
-				
+
 				loadCronJob();
-				LOG.info("load cron job success!");
 			} catch (Exception e) {
 				LOG.error("start cron error:"+ExceptionUtil.getStackTraceAsString(e));
 				System.exit(1);
